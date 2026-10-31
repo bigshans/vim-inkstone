@@ -27,8 +27,10 @@ theme files, so Vim matches the VS Code / Ghostty / Konsole versions byte for by
   checking, quickfix, popups…) plus the filetypes people actually stare at
   (markdown, html/css, yaml/json, shell, python, rust, go, java, c/c++, SQL, vim).
 - Embedded `:terminal` gets the theme's 16-color ANSI palette.
-- Bundled [vim-airline](https://github.com/vim-airline/vim-airline) theme that
-  follows the active variant, including the light ones.
+- Bundled [vim-airline](https://github.com/vim-airline/vim-airline) and
+  [vim-lightline](https://github.com/itchyny/lightline.vim) themes that follow
+  the active variant, including the light ones. The mode segment is tinted
+  blue/green/red/yellow for normal/insert/replace/visual.
 - `:Inkstone` command with completion for switching variants at runtime.
 
 ## Install
@@ -61,9 +63,55 @@ let g:inkstone_variant = 'xuanzhi'      " used by :colorscheme inkstone (default
 let g:inkstone_transparent = 1          " leave the background unset
 let g:inkstone_termguicolors = 0        " don't force 'termguicolors'
 let g:airline_theme = 'inkstone'        " use the bundled airline theme
+let g:lightline = { 'colorscheme': 'inkstone' }  " or the lightline theme
 ```
 
 `:help inkstone` has the full reference.
+
+## Statusline themes
+
+The airline and lightline themes are bundled, but the statusline plugin itself
+must be installed separately. Both themes follow the active variant, including
+the light ones, and refresh automatically when you switch variants with
+`:Inkstone` — no need to re-run `:AirlineTheme` or `lightline#colorscheme()`.
+
+**vim-airline**
+
+```vim
+let g:airline_theme = 'inkstone'
+```
+
+**vim-lightline**
+
+```vim
+let g:lightline = { 'colorscheme': 'inkstone' }
+```
+
+If you assign `g:lightline.colorscheme` after startup instead of in your
+config, initialise lightline once:
+
+```vim
+call lightline#init()
+call lightline#colorscheme()
+```
+
+### Mode colours
+
+The mode segment is painted with the mode accent as its background and the
+canvas colour as its foreground, so changing modes visibly repaints the bar.
+
+| Mode | Accent | Theme colour |
+| --- | --- | --- |
+| Normal | blue | cursor |
+| Insert | green | strings |
+| Replace | red | keywords |
+| Visual | yellow | types |
+| Command | orange | warnings (lightline) |
+| Terminal | blue | info (lightline) |
+
+The middle sections use the neutral widget surface, inactive statuslines use
+muted comment / line-number colours, and error / warning badges keep the
+theme's red and orange. Airline and lightline tabline palettes are included too.
 
 ## How it is generated
 
@@ -82,8 +130,8 @@ and rerun the command.
 
 - Original theme and palette design: [Konata9/inkstone](https://github.com/Konata9/inkstone) (MIT).
 - Colors: [zhongguose.com](https://zhongguose.com/) — 526 traditional Chinese colors.
-- This Vim port: derived colors, highlight mapping, airline theme and the
-  `:Inkstone` command.
+- This Vim port: derived colors, highlight mapping, airline / lightline
+  themes and the `:Inkstone` command.
 
 ## License
 

@@ -773,6 +773,16 @@ function! inkstone#Apply(name) abort
   if exists('g:airline#themes#inkstone#palette')
     silent! call airline#themes#inkstone#refresh()
   endif
+
+  " keep vim-lightline in sync when it is loaded
+  if exists('g:lightline#colorscheme#inkstone#palette')
+    silent! call lightline#colorscheme#inkstone#refresh()
+    if type(get(g:, 'lightline', {})) == type({})
+          \ && get(g:lightline, 'colorscheme', '') ==# 'inkstone'
+      silent! call lightline#colorscheme()
+      silent! call lightline#update()
+    endif
+  endif
 endfunction
 
 function! inkstone#List() abort

@@ -1,3 +1,4 @@
+scriptencoding utf-8
 " vim-airline theme generated from 墨观 Inkstone // do not edit by hand
 if exists('g:airline#themes#inkstone#palette')
   finish
@@ -28,26 +29,24 @@ function! airline#themes#inkstone#refresh()
   let g:airline#themes#inkstone#palette.accents.italic = ['', '', '', '', 'italic']
   let g:airline#themes#inkstone#palette.accents.none = ['', '', '', '', '']
 
-  let s:A = s:mk(p.cursor, p.bg_alt, 'bold')
   let s:B = s:mk(p.lineno_act, p.widget, '')
-  let s:C = s:mk(p.comment, p.bg_hard, '')
   let s:Warn = s:mk(p.bg, p.warn, 'bold')
   let s:Err = s:mk(p.bg, p.err, 'bold')
 
-  function! s:map_for(a) abort
+  " the mode section is painted with the mode colour itself, so switching
+  " modes changes the bar instead of only recolouring one glyph
+  function! s:map_for(a, accent, p) abort
+    let s:A = s:mk(a:p.bg, a:accent, 'bold')
+    let s:C = s:mk(a:accent, a:p.bg_hard, '')
     let g:airline#themes#inkstone#palette[a:a] = airline#themes#generate_color_map(s:A, s:B, s:C)
     let g:airline#themes#inkstone#palette[a:a].airline_warning = s:Warn
     let g:airline#themes#inkstone#palette[a:a].airline_error = s:Err
   endfunction
 
-  call s:map_for('normal')
-  let s:A = s:mk(p.str, p.bg_alt, 'bold')
-  call s:map_for('insert')
-  let s:A = s:mk(p.keyword, p.bg_alt, 'bold')
-  call s:map_for('replace')
-  let s:A = s:mk(p.type, p.bg_alt, 'bold')
-  call s:map_for('visual')
-  let s:A = s:mk(p.cursor, p.bg_alt, 'bold')
+  call s:map_for('normal', p.cursor, p)
+  call s:map_for('insert', p.str, p)
+  call s:map_for('replace', p.keyword, p)
+  call s:map_for('visual', p.type, p)
 
   let s:IA1 = s:mk(p.comment, p.bg_hard, '')
   let s:IA2 = s:mk(p.lineno, p.bg_hard, '')

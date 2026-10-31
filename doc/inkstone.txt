@@ -11,14 +11,17 @@ USAGE                                                            *inkstone*
     :Inkstone                            " list variants
     :Inkstone {variant}                  " switch at runtime
 
+==============================================================================
 VARIABLES                                              *inkstone-options*
 
     g:inkstone_variant     default variant used by :colorscheme inkstone
                            (default 'xuanmo')
     g:inkstone_transparent 1 = leave the background unset (dark variants)
     g:inkstone_termguicolors  0 = do not force 'termguicolors' (default 1)
-    g:airline_theme        set to 'inkstone' to use the bundled airline theme
 
+See |inkstone-statusline| for the vim-airline / vim-lightline options.
+
+==============================================================================
 VARIANTS                                             *inkstone-variants*
 
     xuanmo           玄墨 Xuanmo            dark
@@ -28,11 +31,70 @@ VARIANTS                                             *inkstone-variants*
     xuanzhi-dimmed   宣纸 Dimmed            light
     qingci           青瓷 Qingci            light
 
+==============================================================================
+STATUSLINE                                         *inkstone-statusline*
+
+Inkstone ships optional themes for vim-airline and vim-lightline. They are
+part of this colorscheme; the statusline plugin itself still has to be
+installed separately.
+
+Both themes follow the active Inkstone variant, including the light variants.
+They also stay in sync after |:Inkstone| or a direct |:colorscheme| switch, so
+there is no need to rerun :AirlineTheme or lightline#colorscheme().
+
+The mode segment is painted with the mode accent colour as its background and
+the canvas colour as its foreground. Changing modes therefore repaints the
+bar instead of only recolouring the mode label.
+
+    Mode        Accent colour              Segment
+    normal      editor cursor (blue)       A / left-first
+    insert      strings (green)            A / left-first
+    replace     keywords (red)             A / left-first
+    visual      types (yellow)             A / left-first
+    command     warnings (orange)          lightline only
+    terminal    info colour (blue)         lightline only
+
+The middle sections use the neutral widget surface, inactive statuslines use
+the muted comment / line-number colours, and the error and warning badges keep
+the theme's red and orange. The airline tabline and lightline tabline palette
+are themed as well.
+
+vim-airline ~
+                                                           *inkstone-airline*
+Install vim-airline, then set:
+
+    let g:airline_theme = 'inkstone'
+
+The bundled palette is defined in
+`autoload/airline/themes/inkstone.vim`. It is refreshed automatically when the
+Inkstone variant changes.
+
+vim-lightline ~
+                                                         *inkstone-lightline*
+Install vim-lightline, then set:
+
+    let g:lightline = { 'colorscheme': 'inkstone' }
+
+The bundled palette is defined in
+`autoload/lightline/colorscheme/inkstone.vim`. If `g:lightline.colorscheme`
+is changed after startup, initialise it once in the usual lightline way:
+
+    call lightline#init()
+    call lightline#colorscheme()
+
+No extra call is needed when switching Inkstone variants with |:Inkstone|.
+
+==============================================================================
 FUNCTIONS                                            *inkstone-functions*
 
     inkstone#Apply({variant})   apply a variant programmatically
     inkstone#Palette([{name}])  the palette dict of a variant (hex strings)
     inkstone#Variants()         list of variant names
     inkstone#List()             echo the variant list
+    inkstone#Names()            dict of variant name -> display name
+    inkstone#Cterm({hex})       xterm-256 index of a colour ('' in truecolor)
+    lightline#colorscheme#inkstone#refresh()
+                                rebuild the lightline palette from the current
+                                variant (for custom lightline setups)
 
  vim:tw=78:ts=8:ft=help:norl:
