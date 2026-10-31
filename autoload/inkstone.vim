@@ -363,6 +363,8 @@ let s:names = {
 " variant -> terminal ANSI (16) colours, straight from the VS Code theme
 let s:term_cache = {}
 let s:term_table = []
+" truecolor 终端不需要逐色计算 xterm-256 近似值（冷启动时占了绝大部分耗时）
+let s:truecolor = 0
 
 function! s:build_term_table() abort
   if !empty(s:term_table)
@@ -445,10 +447,20 @@ endfunction
 function! s:hi(group, fg, bg, attr) abort
   let l:cmd = 'highlight ' . a:group
   if a:fg !=# ''
-    let l:cmd .= ' guifg=' . a:fg . ' ctermfg=' . s:cterm(a:fg)
+    let l:cmd .= ' guifg=' . a:fg
+    if s:truecolor
+      let l:cmd .= ' ctermfg=NONE'
+    else
+      let l:cmd .= ' ctermfg=' . s:cterm(a:fg)
+    endif
   endif
   if a:bg !=# ''
-    let l:cmd .= ' guibg=' . a:bg . ' ctermbg=' . s:cterm(a:bg)
+    let l:cmd .= ' guibg=' . a:bg
+    if s:truecolor
+      let l:cmd .= ' ctermbg=NONE'
+    else
+      let l:cmd .= ' ctermbg=' . s:cterm(a:bg)
+    endif
   endif
   let l:attr = a:attr ==# '' ? 'NONE' : a:attr
   execute l:cmd . ' gui=' . l:attr . ' cterm=' . l:attr
@@ -493,6 +505,7 @@ function! inkstone#Apply(name) abort
   if get(g:, 'inkstone_termguicolors', 1) && has('termguicolors')
     set termguicolors
   endif
+  let s:truecolor = has('termguicolors') && &termguicolors
 
   " ---------------------------------------------------------------- core
   call s:hi('Normal', p.fg, l:bg, '')
@@ -769,8 +782,9 @@ function! inkstone#List() abort
 endfunction
 
 " ---------------------------------------------------------------- helpers
+" airline 在 truecolor 下只用 gui 颜色，没必要算 cterm 近似值
 function! inkstone#Cterm(hex) abort
-  return s:cterm(a:hex)
+  return s:truecolor ? '' : s:cterm(a:hex)
 endfunction
 
 " ---------------------------------------------------------------- commands
