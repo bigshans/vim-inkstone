@@ -391,6 +391,15 @@ function! s:rgb(hex) abort
   return [str2nr(a:hex[1:2], 16), str2nr(a:hex[3:4], 16), str2nr(a:hex[5:6], 16)]
 endfunction
 
+" mix a:fg into a:bg; a:pct is the share of a:fg (0.0 - 1.0)
+" used for the soft background tints of Diff*/Error/Todo
+function! s:mix(fg, bg, pct) abort
+  let l:f = s:rgb(a:fg)
+  let l:b = s:rgb(a:bg)
+  let l:c = map([0, 1, 2], 'float2nr(round(l:f[v:val] * a:pct + l:b[v:val] * (1 - a:pct)))')
+  return printf('#%02x%02x%02x', l:c[0], l:c[1], l:c[2])
+endfunction
+
 " nearest xterm-256 colour, used when the terminal has no truecolor
 function! s:cterm(hex) abort
   if a:hex ==# '' || a:hex ==# 'NONE'
@@ -469,6 +478,10 @@ function! inkstone#Apply(name) abort
 
   let l:transparent = get(g:, 'inkstone_transparent', 0)
   let l:bg = l:transparent ? 'NONE' : p.bg
+  " soft tints, so Diff*/Error never fall back to Vim's own red/blue/yellow
+  let l:ins_bg = s:mix(p.ins, p.bg, 0.18)
+  let l:chg_bg = s:mix(p.chg, p.bg, 0.18)
+  let l:del_bg = s:mix(p.del, p.bg, 0.18)
 
   let &background = p.light ? 'light' : 'dark'
   highlight clear
@@ -513,7 +526,7 @@ function! inkstone#Apply(name) abort
   call s:hi('EndOfBuffer', p.guide, '', '')
   call s:hi('SpecialKey', p.whitespace, '', '')
   call s:hi('Whitespace', p.whitespace, '', '')
-  call s:hi('Conceal', p.comment, '', '')
+  call s:hi('Conceal', p.comment, l:bg, '')
   call s:hi('Directory', p.func, '', '')
   call s:hi('Title', p.keyword, '', 'bold')
   call s:hi('StatusLine', p.fg, p.bg_alt, 'NONE')
@@ -535,6 +548,7 @@ function! inkstone#Apply(name) abort
   call s:hi('PmenuExtraSel', p.comment, p.cursor, '')
   call s:hi('PmenuSbar', '', p.bg_alt2, '')
   call s:hi('PmenuThumb', '', p.border, '')
+  call s:hi('PmenuShadow', p.bg, p.bg_hard, '')
   call s:hi('WildMenu', p.bg, p.cursor, 'bold')
   call s:hi('Question', p.ins, '', '')
   call s:hi('MoreMsg', p.ins, '', '')
@@ -542,16 +556,16 @@ function! inkstone#Apply(name) abort
   call s:hi('MsgArea', p.fg, l:bg, '')
   call s:hi('ErrorMsg', p.err, l:bg, 'bold')
   call s:hi('WarningMsg', p.warn, l:bg, '')
-  call s:hi('Error', p.err, '', '')
-  call s:hi('Todo', p.keyword, '', 'bold')
+  call s:hi('Error', p.bg, p.err, 'bold')
+  call s:hi('Todo', p.bg, p.type, 'bold')
   call s:hi('Underlined', p.func, '', 'underline')
   call s:hi('Ignore', p.comment, '', '')
   call s:hi('Debug', p.punct, '', '')
   call s:hi('QuickFixLine', p.keyword, p.linehl, 'bold')
-  call s:hi_ul('SpellBad', '', '', 'undercurl', p.err)
-  call s:hi_ul('SpellCap', '', '', 'undercurl', p.warn)
-  call s:hi_ul('SpellLocal', '', '', 'undercurl', p.info)
-  call s:hi_ul('SpellRare', '', '', 'undercurl', p.type)
+  call s:hi_ul('SpellBad', '', 'NONE', 'undercurl', p.err)
+  call s:hi_ul('SpellCap', '', 'NONE', 'undercurl', p.warn)
+  call s:hi_ul('SpellLocal', '', 'NONE', 'undercurl', p.info)
+  call s:hi_ul('SpellRare', '', 'NONE', 'undercurl', p.type)
 
   " -------------------------------------------------------------- syntax
   call s:hi('Comment', p.comment, '', 'italic')
@@ -670,9 +684,9 @@ function! inkstone#Apply(name) abort
   call s:hi('diffIndexLine', p.diffhdr, '', '')
 
   " --------------------------------------------------------------- diffs
-  call s:hi('DiffAdd', p.ins, '', '')
-  call s:hi('DiffChange', p.chg, '', '')
-  call s:hi('DiffDelete', p.del, '', '')
+  call s:hi('DiffAdd', p.ins, l:ins_bg, '')
+  call s:hi('DiffChange', p.chg, l:chg_bg, '')
+  call s:hi('DiffDelete', p.del, l:del_bg, '')
   call s:hi('DiffText', p.bg, p.chg, 'bold')
   call s:hi('diffAdded', p.ins, '', '')
   call s:hi('diffRemoved', p.del, '', '')
