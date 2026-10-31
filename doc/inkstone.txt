@@ -1,0 +1,38 @@
+*inkstone.txt*  墨观 Inkstone · colorscheme for Vim / Neovim
+
+Port of the VS Code theme "墨观 Inkstone · 中国传统色彩" (Konata9, MIT).
+Palette: zhongguose.com — 526 traditional Chinese colors.
+
+==============================================================================
+USAGE                                                            *inkstone*
+
+    :colorscheme inkstone               " default = 玄墨 xuanmo
+    :colorscheme inkstone-{variant}
+    :Inkstone                            " list variants
+    :Inkstone {variant}                  " switch at runtime
+
+VARIABLES                                              *inkstone-options*
+
+    g:inkstone_variant     default variant used by :colorscheme inkstone
+                           (default 'xuanmo')
+    g:inkstone_transparent 1 = leave the background unset (dark variants)
+    g:inkstone_termguicolors  0 = do not force 'termguicolors' (default 1)
+    g:airline_theme        set to 'inkstone' to use the bundled airline theme
+
+VARIANTS                                             *inkstone-variants*
+
+    xuanmo           玄墨 Xuanmo            dark
+    xuanmo-dimmed    玄墨 Dimmed            dark
+    canghai          沧海 Canghai           dark
+    xuanzhi          宣纸 Xuanzhi           light
+    xuanzhi-dimmed   宣纸 Dimmed            light
+    qingci           青瓷 Qingci            light
+
+FUNCTIONS                                            *inkstone-functions*
+
+    inkstone#Apply({variant})   apply a variant programmatically
+    inkstone#Palette([{name}])  the palette dict of a variant (hex strings)
+    inkstone#Variants()         list of variant names
+    inkstone#List()             echo the variant list
+
+ vim:tw=78:ts=8:ft=help:norl:
