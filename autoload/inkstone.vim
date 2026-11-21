@@ -362,32 +362,16 @@ let s:names = {
 
 " variant -> terminal ANSI (16) colours, straight from the VS Code theme
 let s:term_cache = {}
-let s:term_table = []
+" the 16 basic colours; the 6x6x6 cube and the grey ramp are described
+" analytically below, so the whole 256-entry table never has to exist
+let s:base16 = [
+      \ [0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+      \ [0, 0, 128], [128, 0, 128], [0, 128, 128], [192, 192, 192],
+      \ [128, 128, 128], [255, 0, 0], [0, 255, 0], [255, 255, 0],
+      \ [0, 0, 255], [255, 0, 255], [0, 255, 255], [255, 255, 255]]
+let s:cube = [0, 95, 135, 175, 215, 255]
 " truecolor 终端不需要逐色计算 xterm-256 近似值（冷启动时占了绝大部分耗时）
 let s:truecolor = 0
-
-function! s:build_term_table() abort
-  if !empty(s:term_table)
-    return
-  endif
-  let s:term_table = [
-        \ [0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
-        \ [0, 0, 128], [128, 0, 128], [0, 128, 128], [192, 192, 192],
-        \ [128, 128, 128], [255, 0, 0], [0, 255, 0], [255, 255, 0],
-        \ [0, 0, 255], [255, 0, 255], [0, 255, 255], [255, 255, 255]]
-  let l:levels = [0, 95, 135, 175, 215, 255]
-  for l:r in l:levels
-    for l:g in l:levels
-      for l:b in l:levels
-        call add(s:term_table, [l:r, l:g, l:b])
-      endfor
-    endfor
-  endfor
-  for l:i in range(24)
-    let l:v = 8 + l:i * 10
-    call add(s:term_table, [l:v, l:v, l:v])
-  endfor
-endfunction
 
 function! s:rgb(hex) abort
   return [str2nr(a:hex[1:2], 16), str2nr(a:hex[3:4], 16), str2nr(a:hex[5:6], 16)]
@@ -402,27 +386,75 @@ function! s:mix(fg, bg, pct) abort
   return printf('#%02x%02x%02x', l:c[0], l:c[1], l:c[2])
 endfunction
 
+" index of the nearest level of the 6x6x6 cube for one channel
+function! s:cube_step(v) abort
+  " exact midpoints tie, and the lower level wins (as in the table scan)
+  if a:v < 48
+    return 0
+  elseif a:v <= 115
+    return 1
+  elseif a:v <= 155
+    return 2
+  elseif a:v <= 195
+    return 3
+  elseif a:v <= 235
+    return 4
+  endif
+  return 5
+endfunction
+
+function! s:dist(t, c) abort
+  return 2 * (a:t[0] - a:c[0]) * (a:t[0] - a:c[0])
+        \ + 4 * (a:t[1] - a:c[1]) * (a:t[1] - a:c[1])
+        \ + 3 * (a:t[2] - a:c[2]) * (a:t[2] - a:c[2])
+endfunction
+
 " nearest xterm-256 colour, used when the terminal has no truecolor
+"
+" The 2:4:3 weighted distance is separable per channel, so the cube part has
+" exactly one candidate (the nearest level per channel) and the grey ramp one
+" (the vertex of the quadratic). Only the 16 basic colours still need a scan,
+" so this costs ~20 arithmetic ops instead of 256 vimscript loop iterations.
 function! s:cterm(hex) abort
   if a:hex ==# '' || a:hex ==# 'NONE'
     return 'NONE'
   endif
-  if has_key(s:term_cache, a:hex)
-    return s:term_cache[a:hex]
+  let l:hit = get(s:term_cache, a:hex, '')
+  if l:hit !=# ''
+    return l:hit
   endif
-  call s:build_term_table()
   let l:c = s:rgb(a:hex)
-  let [l:best, l:bestd] = [0, 1.0e9]
+  let [l:best, l:bestd] = [0, 2147483647]
+  " ties go to the lower index, hence strict '<' in table order
   let l:i = 0
-  for l:t in s:term_table
-    let l:d = 2.0 * (l:t[0] - l:c[0]) * (l:t[0] - l:c[0])
-          \ + 4.0 * (l:t[1] - l:c[1]) * (l:t[1] - l:c[1])
-          \ + 3.0 * (l:t[2] - l:c[2]) * (l:t[2] - l:c[2])
+  for l:t in s:base16
+    let l:d = s:dist(l:t, l:c)
     if l:d < l:bestd
       let [l:bestd, l:best] = [l:d, l:i]
     endif
     let l:i += 1
   endfor
+  let l:ri = s:cube_step(l:c[0])
+  let l:gi = s:cube_step(l:c[1])
+  let l:bi = s:cube_step(l:c[2])
+  let l:d = s:dist([s:cube[l:ri], s:cube[l:gi], s:cube[l:bi]], l:c)
+  if l:d < l:bestd
+    let [l:bestd, l:best] = [l:d, 16 + 36 * l:ri + 6 * l:gi + l:bi]
+  endif
+  " grey ramp: 8, 18, ..., 238 — round (2r+4g+3b)/9 to the nearest step,
+  " ties to the lower step to keep the brute-force scan's tie-breaking
+  let l:step = (2 * l:c[0] + 4 * l:c[1] + 3 * l:c[2] - 72 + 44) / 90
+  if l:step < 0
+    let l:step = 0
+  elseif l:step > 23
+    let l:step = 23
+  endif
+  let l:g = 8 + 10 * l:step
+  let l:d = 2 * (l:g - l:c[0]) * (l:g - l:c[0]) + 4 * (l:g - l:c[1]) * (l:g - l:c[1])
+        \ + 3 * (l:g - l:c[2]) * (l:g - l:c[2])
+  if l:d < l:bestd
+    let l:best = 232 + l:step
+  endif
   let s:term_cache[a:hex] = string(l:best)
   return s:term_cache[a:hex]
 endfunction
@@ -444,6 +476,12 @@ function! inkstone#Variants() abort
   return sort(keys(s:names))
 endfunction
 
+" highlight commands are collected into s:cmd and run with a single
+" :execute, so one colorscheme load parses one command line instead of ~200
+let s:cmd = []
+" built scripts, keyed by '<variant>|<transparent>|<truecolor>'
+let s:script_cache = {}
+
 function! s:hi(group, fg, bg, attr) abort
   let l:cmd = 'highlight ' . a:group
   if a:fg !=# ''
@@ -463,49 +501,28 @@ function! s:hi(group, fg, bg, attr) abort
     endif
   endif
   let l:attr = a:attr ==# '' ? 'NONE' : a:attr
-  execute l:cmd . ' gui=' . l:attr . ' cterm=' . l:attr
+  call add(s:cmd, l:cmd . ' gui=' . l:attr . ' cterm=' . l:attr)
 endfunction
 
 " like s:hi but also sets the undercurl colour (guisp)
 function! s:hi_ul(group, fg, bg, attr, sp) abort
   call s:hi(a:group, a:fg, a:bg, a:attr)
-  execute 'highlight ' . a:group . ' guisp=' . a:sp
+  call add(s:cmd, 'highlight ' . a:group . ' guisp=' . a:sp)
 endfunction
 
 function! s:link(from, to) abort
-  execute 'highlight! link ' . a:from . ' ' . a:to
+  call add(s:cmd, 'highlight! link ' . a:from . ' ' . a:to)
 endfunction
 
-function! inkstone#Apply(name) abort
-  if !has_key(s:palettes, a:name)
-    echohl ErrorMsg
-    echomsg 'inkstone: unknown variant "' . a:name . '". Available: '
-          \ . join(inkstone#Variants(), ', ')
-    echohl None
-    return
-  endif
-
+" the whole :highlight payload of one variant, as a list of commands
+function! s:script(name, transparent) abort
+  let s:cmd = []
   let p = s:palettes[a:name]
-  let g:inkstone_current = a:name
-
-  let l:transparent = get(g:, 'inkstone_transparent', 0)
-  let l:bg = l:transparent ? 'NONE' : p.bg
+  let l:bg = a:transparent ? 'NONE' : p.bg
   " soft tints, so Diff*/Error never fall back to Vim's own red/blue/yellow
   let l:ins_bg = s:mix(p.ins, p.bg, 0.18)
   let l:chg_bg = s:mix(p.chg, p.bg, 0.18)
   let l:del_bg = s:mix(p.del, p.bg, 0.18)
-
-  let &background = p.light ? 'light' : 'dark'
-  highlight clear
-  if exists('syntax_on')
-    syntax reset
-  endif
-  " ':hi clear' unsets g:colors_name, so set it afterwards
-  let g:colors_name = 'inkstone-' . a:name
-  if get(g:, 'inkstone_termguicolors', 1) && has('termguicolors')
-    set termguicolors
-  endif
-  let s:truecolor = has('termguicolors') && &termguicolors
 
   " ---------------------------------------------------------------- core
   call s:hi('Normal', p.fg, l:bg, '')
@@ -766,8 +783,49 @@ function! inkstone#Apply(name) abort
   call s:link('fzf2', 'PmenuSel')
   call s:link('fzf3', 'PmenuSel')
 
-  " ------------------------------------------- embedded terminal colours
-  let g:terminal_ansi_colors = p.ansi
+  return s:cmd
+endfunction
+
+function! inkstone#Apply(name) abort
+  if !has_key(s:palettes, a:name)
+    echohl ErrorMsg
+    echomsg 'inkstone: unknown variant "' . a:name . '". Available: '
+          \ . join(inkstone#Variants(), ', ')
+    echohl None
+    return
+  endif
+
+  let l:p = s:palettes[a:name]
+  let g:inkstone_current = a:name
+  let l:transparent = get(g:, 'inkstone_transparent', 0)
+
+  let &background = l:p.light ? 'light' : 'dark'
+  if get(g:, 'inkstone_termguicolors', 1) && has('termguicolors')
+    set termguicolors
+  endif
+  let s:truecolor = has('termguicolors') && &termguicolors
+
+  " switching back and forth between variants is common, so keep the built
+  " scripts around; rebuilding one costs ~1ms, replaying it ~0.3ms
+  let l:key = a:name . '|' . l:transparent . '|' . s:truecolor
+  let l:cmds = get(s:script_cache, l:key, [])
+  if empty(l:cmds)
+    if len(s:script_cache) >= 12
+      let s:script_cache = {}
+    endif
+    let l:cmds = s:script(a:name, l:transparent)
+    let s:script_cache[l:key] = l:cmds
+  endif
+
+  highlight clear
+  if exists('syntax_on')
+    syntax reset
+  endif
+  " ':hi clear' unsets g:colors_name, so set it afterwards
+  let g:colors_name = 'inkstone-' . a:name
+  execute join(l:cmds, "\n")
+
+  let g:terminal_ansi_colors = l:p.ansi
 
   " keep vim-airline in sync when it is loaded
   if exists('g:airline#themes#inkstone#palette')
@@ -784,6 +842,8 @@ function! inkstone#Apply(name) abort
     endif
   endif
 endfunction
+
+
 
 function! inkstone#List() abort
   for l:k in inkstone#Variants()
