@@ -6,7 +6,7 @@ block between the `{{{ palettes` / `}}} palettes` markers is rewritten.
 
 Usage:
     # unpack the extension first
-    unzip Konata9.inkstone-0.3.4.vsix -d /tmp/inkstone
+    unzip Konata9.inkstone-0.6.0.vsix -d /tmp/inkstone
     python3 tools/build.py --themes /tmp/inkstone/extension/themes
 
     # or point it at a checkout of github.com/Konata9/inkstone

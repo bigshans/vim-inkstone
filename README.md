@@ -10,8 +10,8 @@ theme files, so Vim matches the VS Code / Ghostty / Konsole versions byte for by
 
 | Variant | Mode | Canvas | Keywords | Strings | Types |
 | --- | --- | --- | --- | --- | --- |
-| **玄墨 Xuanmo** | dark | `#14131a` | `#da5761` | `#2bae85` | `#d6a01d` |
-| **玄墨 Dimmed** | dark | `#19181e` | `#c27c88` | `#69a794` | `#d6a01d` |
+| **玄墨 Xuanmo** | dark | `#14131a` | `#d8574a` | `#2bae85` | `#c08eaf` |
+| **玄墨 Dimmed** | dark | `#19181e` | `#c57f73` | `#69a794` | `#d6a01d` |
 | **沧海 Canghai** | dark | `#0d1822` | `#dc5e41` | `#1ba784` | `#c08eaf` |
 | **宣纸 Xuanzhi** | light | `#f7f4ed` | `#c34435` | `#1a6840` | `#813c85` |
 | **宣纸 Dimmed** | light | `#e9e2d4` | `#894e54` | `#1a6840` | `#525288` |
